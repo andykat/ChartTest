@@ -1,0 +1,143 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <title></title>
+  <script type="text/javascript" src="jquery-3.1.0.min.js"></script>
+  <script src="moment.js"></script>
+  <script src="Chart.js"></script>
+  <script src="jquery.base64.js"></script>
+</head>
+<body>
+  <input id="days" type="button" value="days" onclick="daysChart();" />
+  <input id="weeks" type="button" value="weeks" onclick="monthsChart();" />
+  <input id="years" type="button" value="years" onclick="yearsChart();" />
+  <form>
+  Start Date:<br>
+  <input id="startdate" type="date" value="2016-06-01"><br>
+  End Date:<br>
+  <input id="enddate" type="date" value="2016-07-15">
+</form>
+  <canvas id="myChart" width=80% height=80%></canvas>
+
+  <script>
+  function getStartDate(){
+    var date=$('#startdate').val().split('/');
+    var day=date[0];
+    var month=date[1];
+    var year=date[2];
+    var startDate = year + '-' + month + '-' + day;
+    return startDate
+  }
+  function getEndDate(){
+    var date=$('#enddate').val().split('/');
+    var day=date[0];
+    var month=date[1];
+    var year=date[2];
+    var startDate = year + '-' + month + '-' + day;
+    return startDate
+  }
+
+  function daysChart(){
+
+    sendRequest("day",startDate,endDate);
+  }
+  function monthsChart(){
+    sendRequest("month",startDate,endDate);
+  }
+  function sendRequest(toggle,startDate,endDate){
+    var xmlHttp = new XMLHttpRequest();
+
+    xmlHttp.ontimeout = function () {
+    console.error("The request for timed out.");
+    };
+  xmlHttp.onload = function() {
+    //console.log(xmlHttp.responseText);
+    if (xmlHttp.readyState === 4) {
+      if (xmlHttp.status === 200) {
+        //console.log(xmlHttp.responseText);
+
+        //console.log(Object.keys(dict).length)
+        console.log(xmlHttp.responseText);
+
+        var arr = JSON.parse(xmlHttp.responseText);
+        createChart(arr);
+      } else {
+        console.error(xmlHttp.statusText);
+      }
+    }
+  };
+
+    var authorizationBasic = btoa("79d35da624cd9b657f59a2f68f86be11");
+    //var scriptStr = 'function main() {return Events({ from_date: "2016-06-01", to_date: "2016-07-15",}) .filter(function(event){return event.name == "unique_install";})}';
+    var scriptStr = "";
+    if(toggle == "day")
+    {
+      scriptStr = "function main() { return Events({ from_date: '2016-06-01' , to_date: '2016-07-15' }) .filter(function(event){ return event.name == 'unique_install'; }) .groupBy( [getDay], mixpanel.reducer.count() ); } function getDay(event) { var day = (new Date(event.time).toISOString()).split('T')[0].split('-')[2]; var month = (new Date(event.time).toISOString()).split('T')[0].split('-')[1]; var year = (new Date(event.time).toISOString()).split('T')[0].split('-')[0]; return month + '-' + day + '-' + year; }";
+    }
+    if(toggle == "month")
+    {
+      scriptStr = "function main() { return Events({ from_date: '2016-04-01' , to_date: '2016-07-28' }) .filter(function(event){ return event.name == 'unique_install'; }) .groupBy( [getDay], mixpanel.reducer.count() ); } function getDay(event) { var month = (new Date(event.time).toISOString()).split('T')[0].split('-')[1]; var year = (new Date(event.time).toISOString()).split('T')[0].split('-')[0]; return month + '-' + year; }";
+    }
+
+    var url = "https://mixpanel.com/api/2.0/jql/?script=" + encodeURIComponent(scriptStr);
+    xmlHttp.open( "POST", url, true);
+    xmlHttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    xmlHttp.setRequestHeader('Authorization', "Basic " + authorizationBasic);
+    xmlHttp.setRequestHeader('Accept', 'application/json');
+    //console.log(xmlHttp.)
+    xmlHttp.send( null );
+  }
+  function createChart(installArr)
+  {
+    var dates = new Array();
+    var counts = new Array();
+    var arrayLength = installArr.length;
+    for (var i = 0; i < arrayLength; i++) {
+      dates.push ( installArr[i]["key"])
+      counts.push ( installArr[i]["value"])
+    }
+    var data = {
+    labels: dates,
+    datasets: [
+        {
+            label: "Number of Downloads",
+            fill: false,
+            lineTension: 0.1,
+            backgroundColor: "rgba(75,192,192,0.4)",
+            borderColor: "rgba(75,192,192,1)",
+            borderCapStyle: 'butt',
+            borderDash: [],
+            borderDashOffset: 0.0,
+            borderJoinStyle: 'miter',
+            pointBorderColor: "rgba(75,192,192,1)",
+            pointBackgroundColor: "#fff",
+            pointBorderWidth: 1,
+            pointHoverRadius: 5,
+            pointHoverBackgroundColor: "rgba(75,192,192,1)",
+            pointHoverBorderColor: "rgba(220,220,220,1)",
+            pointHoverBorderWidth: 2,
+            pointRadius: 1,
+            pointHitRadius: 10,
+            data: counts,
+            spanGaps: false,
+        }
+    ]
+    };
+    var ctx = document.getElementById("myChart");
+    ctx.width = 300;
+    ctx.height = 100;
+    ctx.style.width  = '600px';
+    ctx.style.height = '200px';
+    var myChart = new Chart(ctx,{
+      type: 'line',
+      data: data
+    });
+
+  }
+</script>
+
+
+</body>
+</html>
