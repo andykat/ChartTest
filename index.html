@@ -11,8 +11,8 @@
 </head>
 <body>
   <input id="days" type="button" value="days" onclick="daysChart();" />
-  <input id="weeks" type="button" value="weeks" onclick="monthsChart();" />
-  <input id="years" type="button" value="years" onclick="yearsChart();" />
+  <input id="weeks" type="button" value="weeks" onclick="weeksChart();" />
+  <input id="months" type="button" value="months" onclick="monthsChart();" />
   <form>
   Start Date:<br>
   <input id="startdate" type="date" value="2016-06-01"><br>
@@ -23,30 +23,34 @@
 
   <script>
   function getStartDate(){
-    var date=$('#startdate').val().split('/');
-    var day=date[0];
+    var date=$('#startdate').val().split('-');
+    var day=date[2];
     var month=date[1];
-    var year=date[2];
+    var year=date[0];
     var startDate = year + '-' + month + '-' + day;
-    return startDate
+    return startDate;
   }
   function getEndDate(){
-    var date=$('#enddate').val().split('/');
-    var day=date[0];
+    var date=$('#enddate').val().split('-');
+    var day=date[2];
     var month=date[1];
-    var year=date[2];
-    var startDate = year + '-' + month + '-' + day;
-    return startDate
+    var year=date[0];
+    var endDate = year + '-' + month + '-' + day;
+    return endDate;
   }
 
   function daysChart(){
-
+    var startDate = getStartDate();
+    var endDate = getEndDate();
     sendRequest("day",startDate,endDate);
   }
   function monthsChart(){
+    var startDate = getStartDate();
+    var endDate = getEndDate();
     sendRequest("month",startDate,endDate);
   }
   function sendRequest(toggle,startDate,endDate){
+
     var xmlHttp = new XMLHttpRequest();
 
     xmlHttp.ontimeout = function () {
@@ -62,7 +66,14 @@
         console.log(xmlHttp.responseText);
 
         var arr = JSON.parse(xmlHttp.responseText);
-        createChart(arr);
+        if(toggle == "day")
+        {
+          createDayChart(toggle, arr);
+        }
+        else if(toggle == "month")
+        {
+          createMonthChart(toggle, arr);
+        }
       } else {
         console.error(xmlHttp.statusText);
       }
@@ -74,13 +85,13 @@
     var scriptStr = "";
     if(toggle == "day")
     {
-      scriptStr = "function main() { return Events({ from_date: '2016-06-01' , to_date: '2016-07-15' }) .filter(function(event){ return event.name == 'unique_install'; }) .groupBy( [getDay], mixpanel.reducer.count() ); } function getDay(event) { var day = (new Date(event.time).toISOString()).split('T')[0].split('-')[2]; var month = (new Date(event.time).toISOString()).split('T')[0].split('-')[1]; var year = (new Date(event.time).toISOString()).split('T')[0].split('-')[0]; return month + '-' + day + '-' + year; }";
+      scriptStr = "function main() { return Events({ from_date: '" +startDate+ "' , to_date: '" +endDate+ "'}) .filter(function(event){ return event.name == 'unique_install'; }) .groupBy( [getDay], mixpanel.reducer.count() ); } function getDay(event) { var day = (new Date(event.time).toISOString()).split('T')[0].split('-')[2]; var month = (new Date(event.time).toISOString()).split('T')[0].split('-')[1]; var year = (new Date(event.time).toISOString()).split('T')[0].split('-')[0]; return month + '-' + day + '-' + year; }";
     }
     if(toggle == "month")
     {
-      scriptStr = "function main() { return Events({ from_date: '2016-04-01' , to_date: '2016-07-28' }) .filter(function(event){ return event.name == 'unique_install'; }) .groupBy( [getDay], mixpanel.reducer.count() ); } function getDay(event) { var month = (new Date(event.time).toISOString()).split('T')[0].split('-')[1]; var year = (new Date(event.time).toISOString()).split('T')[0].split('-')[0]; return month + '-' + year; }";
+      scriptStr = "function main() { return Events({ from_date: '" +startDate+ "' , to_date: '" +endDate+ "'}) .filter(function(event){ return event.name == 'unique_install'; }) .groupBy( [getDay], mixpanel.reducer.count() ); } function getDay(event) { var month = (new Date(event.time).toISOString()).split('T')[0].split('-')[1]; var year = (new Date(event.time).toISOString()).split('T')[0].split('-')[0]; return month + '-' + year; }";
     }
-
+    console.log(scriptStr)
     var url = "https://mixpanel.com/api/2.0/jql/?script=" + encodeURIComponent(scriptStr);
     xmlHttp.open( "POST", url, true);
     xmlHttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
@@ -89,15 +100,86 @@
     //console.log(xmlHttp.)
     xmlHttp.send( null );
   }
-  function createChart(installArr)
+  function createDayChart(toggle, installArr)
+  {
+    var dates = new Array();
+    var counts = new Array();
+    var arrayLength = installArr.length;
+    //add the days that had 0 installs
+    for (var i = 0; i < arrayLength; i++) {
+      if(i - 1 > -1)
+      {
+        var tdateStr2=installArr[i-1]["key"][0];
+        var tdate2 = tdateStr2.split('-');
+        var day2=tdate2[1];
+        var month2=tdate2[0];
+        var year2=tdate2[2];
+        var dateStr2 = year2 + '-' + month2 + '-' + day2;
+
+
+        var date2 = new Date(dateStr2)
+        //add day to date class cuz date class is shit
+        date2.setDate(date2.getDate() +1);
+
+        var tdateStr=installArr[i]["key"][0];
+        var tdate = tdateStr.split('-');
+
+        var day=tdate[1];
+        var month=tdate[0];
+        var year=tdate[2];
+        var dateStr = year + '-' + month + '-' + day;
+
+        var date = new Date(dateStr);
+        //the date class subtracts one day cuz it starts at index0
+        //date.setDate(date.getDate() - 1);
+
+        var count = 0;
+        console.log(date.toDateString());
+        console.log(date2.toDateString());
+
+        while (date.getFullYear() != date2.getFullYear() || date.getMonth() != date2.getMonth() || date.getDate() != date2.getDate())
+        {
+            date.setDate(date.getDate()-1);
+            count += 1;
+        }
+        date.setDate(date.getDate()+1);
+        for(var k=0; k < count; k++)
+        {
+          var tmonth = 0;
+          if(date.getMonth() < 12)
+          {
+            tmonth = date.getMonth() + 1;
+          }
+          else{
+            tmonth = 1
+          }
+          var newDateStr = tmonth.toString() + "-" + date.getDate().toString() + "-" + date.getFullYear().toString();
+
+          dates.push(newDateStr);
+          counts.push(0);
+          date.setDate(date.getDate()+1);
+        }
+      }
+
+
+      dates.push ( installArr[i]["key"]);
+      counts.push ( installArr[i]["value"]);
+    }
+    drawChart(dates, counts);
+  }
+  function createMonthChart(toggle, installArr)
   {
     var dates = new Array();
     var counts = new Array();
     var arrayLength = installArr.length;
     for (var i = 0; i < arrayLength; i++) {
-      dates.push ( installArr[i]["key"])
-      counts.push ( installArr[i]["value"])
+      dates.push ( installArr[i]["key"]);
+      counts.push ( installArr[i]["value"]);
     }
+    drawChart(dates, counts);
+  }
+  function drawChart(dates, counts)
+  {
     var data = {
     labels: dates,
     datasets: [
